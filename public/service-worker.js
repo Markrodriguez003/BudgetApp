@@ -51,16 +51,18 @@ self.addEventListener("fetch", function (evt) {
           .then(response => {
             // If the response was good, clone it and store it in the cache.
             if (response.status === 200) {
-              console.log("CLONING DATA INTO CACHE");
+              // console.log("CLONING DATA INTO CACHE");
+              // console.log("first Cache::: _ " + JSON.stringify(cache));
+
               cache.put(evt.request.url, response.clone());
-              console.log("Cache Keys are --> : " + cache.keys());
+              // console.log("Cache Keys are --> : " + JSON.stringify(cache.keys()));
             }
 
             return response;
           })
           .catch(err => {
             // Network request failed, try to get it from the cache.
-            console.log("NETWORK FAILED -> GRABBING DATA FROM CACHE");
+            // console.log("NETWORK FAILED -> GRABBING DATA FROM CACHE");
             return cache.match(evt.request);
           });
       }).catch(err => console.log(err))
@@ -72,6 +74,10 @@ self.addEventListener("fetch", function (evt) {
   evt.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(evt.request).then(response => {
+
+        // console.log("Response::: _ " + JSON.stringify(response));
+        // console.log("Request::: _ " + JSON.stringify(fetch(evt.request)));
+        // console.log("Cache::: _ " + JSON.stringify(cache));
         return response || fetch(evt.request);
       });
     })
