@@ -1,18 +1,69 @@
 let transactions = [];
 let myChart;
+let offlineEntries = [];
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
+
+// Checks to see if there is any data in LS and if there is populates DB when online
+if (localStorage.getItem("offline_LS_entries") === null) {
+  console.log("There isnt anything inside LOCAL STORAGE");
+
+} else {
+  console.log("There is stuff in LOCAL STORAGE");
+  let offlineLSData = JSON.parse(localStorage.getItem(("offline_LS_entries")));
+
+  fetch("/api/transaction/bulk", {
+    method: "POST",
+    body: JSON.stringify(offlineLSData),
+    headers: {
+      Accept: "application/json, text/plain, */*",
+      "Content-Type": "application/json"
+    }
+  })
+    .then(response => {
+      console.log("UPLOADING OFFLINE LS DATA (MULTIPLE)");
+      localStorage.removeItem("offline_LS_entries");
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+
+      console.log("Cannot connect to server :( --> " + err);
+      nameEl.value = "";
+      amountEl.value = "";
+    });
+}
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 fetch("/api/transaction")
   .then(response => {
+    console.log("I am here!")
     return response.json();
   })
   .then(data => {
     // save db data on global variable
     transactions = data;
-    console.log("Here are the files in the DB:::: " + transactions);
+    // console.log("Here are the files in the DB:::: " + transactions);
+    // console.log("Here are the files in the LS:::: " + offlineEntries);
     populateTotal();
-    populateTable(); 
+    populateTable();
     populateChart();
   });
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 function populateTotal() {
   // reduce transaction amounts to a single total value
@@ -23,6 +74,9 @@ function populateTotal() {
   let totalEl = document.querySelector("#total");
   totalEl.textContent = total;
 }
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 function populateTable() {
   let tbody = document.querySelector("#tbody");
@@ -35,10 +89,12 @@ function populateTable() {
       <td>${transaction.name}</td>
       <td>${transaction.value}</td>
     `;
-
     tbody.appendChild(tr);
   });
 }
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 function populateChart() {
   // copy array and reverse it
@@ -51,11 +107,15 @@ function populateChart() {
     return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
   });
 
+  // ----------------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------------
+
   // create incremental values for chart
   let data = reversed.map(t => {
     sum += parseInt(t.value);
     return sum;
   });
+
 
   // remove old chart if it exists
   if (myChart) {
@@ -77,6 +137,9 @@ function populateChart() {
     }
   });
 }
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 function sendTransaction(isAdding) {
   let nameEl = document.querySelector("#t-name");
@@ -137,18 +200,17 @@ function sendTransaction(isAdding) {
     .catch(err => {
       // fetch failed, so save in indexed db
       console.log("!@!NETWORK ERROR:: CANNOT PUT DATA TO DB" + err)
-      
-      
       // console.log("These are all the data entries:: " + JSON.stringify(transactions));
       // Passes entire table to function to be processed offline 
-
       saveRecord(transaction);
-
       // clear form
       nameEl.value = "";
       amountEl.value = "";
     });
 }
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 document.querySelector("#add-btn").onclick = function () {
   sendTransaction(true);
@@ -158,16 +220,16 @@ document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
 
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
+
 // Will hold all offline data entries in local storage and injects them into db when online
-function saveRecord(data){
-  console.log("These are all the data entries to LS:: " + JSON.stringify(data));
-  // Saves entire table emtries, including offline entries, to local storage
-  localStorage.setItem("offline-data", JSON.stringify(data));
-  let test = localStorage.getItem("offline-data");
-  console.log("TESTING LOCAL STORAGE::::: " + test);
-
-
-
+function saveRecord(data) {
+  let offlineEntries = JSON.parse(localStorage.getItem('offline_LS_entries')) || [];
+  offlineEntries.push(data);
+  localStorage.setItem('offline_LS_entries', JSON.stringify(offlineEntries));
+  // console.log("Printing inside saveRecord() --> " + JSON.stringify(localStorage.getItem('offline_LS_entries')));
 
 
 }
